@@ -1,3 +1,7 @@
+from os import getenv
+from dotenv import load_dotenv
+import os
+
 """
 Django settings for Testing project.
 
@@ -14,18 +18,21 @@ from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
+
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-p%kf*ahxp93zi_co7t*crxe%l4w&*l)3-m_ikz^hs6z)2ix+gd'
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -55,8 +62,7 @@ ROOT_URLCONF = 'Testing.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates']
-        ,
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -76,8 +82,15 @@ WSGI_APPLICATION = 'Testing.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('NEON_DATABASE_NAME'),
+        'HOST':os.environ.get('NEON_DATABASE_HOST'),
+        'PORT':os.environ.get('NEON_DATABASE_PORT'),
+        'USER':os.environ.get('NEON_DATABASE_USERNAME'),
+        'PASSWORD':os.environ.get('NEON_DATABASE_PASSWORD'),
+        'OPTIONS':{
+        'sslmode': 'require',
+        }
     }
 }
 
