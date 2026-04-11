@@ -1,39 +1,139 @@
-<form method="POST" enctype="multipart/form-data">
-    {% csrf_token %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Enrolment Form</title>
+    <style>
+        .step {
+            display: none;
+        }
 
-    {% for section in schema.sections %}
-        <h2>{{ section.section_number }} {{ section.section_title }}</h2>
+        .step.active {
+            display: block;
+        }
 
-        {% for question in section.questions %}
-            <div>
-                <label>{{ question.label }}</label>
+        .progress-container {
+            width: 100%;
+            background: #eee;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
 
-                {% if question.type == "text" %}
-                    <input type="text" name="{{ question.key }}">
+        .progress-bar {
+            height: 20px;
+            width: 0%;
+            background: #4caf50;
+            transition: width 0.3s ease;
+            text-align: center;
+            color: white;
+            line-height: 20px;
+            font-size: 12px;
+        }
 
-                {% elif question.type == "date" %}
-                    <input type="date" name="{{ question.key }}">
+        .navigation-buttons {
+            margin-top: 20px;
+        }
 
-                {% elif question.type == "textarea" %}
-                    <textarea name="{{ question.key }}"></textarea>
+        .navigation-buttons button {
+            padding: 10px 16px;
+            margin-right: 10px;
+        }
 
-                {% elif question.type == "file" %}
-                    <input type="file" name="{{ question.key }}">
+        .question {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Enrolment Form</h1>
 
-                {% elif question.type == "boolean" %}
-                    <input type="checkbox" name="{{ question.key }}">
+    <div class="progress-container">
+        <div id="progressBar" class="progress-bar">0%</div>
+    </div>
 
-                {% elif question.type == "select" %}
-                    <select name="{{ question.key }}">
-                        {% for choice in question.choices %}
-                            <option value="{{ choice }}">{{ choice }}</option>
-                        {% endfor %}
-                    </select>
-                {% endif %}
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
 
+        {% for section in schema.sections %}
+            <div class="step {% if forloop.first %}active{% endif %}">
+                <h2>{{ section.section_number }} {{ section.section_title }}</h2>
+
+                {% for question in section.questions %}
+                    <div class="question">
+                        <label>{{ question.label }}</label><br>
+
+                        {% if question.type == "text" %}
+                            <input type="text" name="{{ question.key }}">
+
+                        {% elif question.type == "date" %}
+                            <input type="date" name="{{ question.key }}">
+
+                        {% elif question.type == "textarea" %}
+                            <textarea name="{{ question.key }}"></textarea>
+
+                        {% elif question.type == "file" %}
+                            <input type="file" name="{{ question.key }}">
+
+                        {% elif question.type == "boolean" %}
+                            <input type="checkbox" name="{{ question.key }}" value="true">
+
+                        {% elif question.type == "select" %}
+                            <select name="{{ question.key }}">
+                                <option value="">Select</option>
+                                {% for choice in question.choices %}
+                                    <option value="{{ choice }}">{{ choice }}</option>
+                                {% endfor %}
+                            </select>
+                        {% endif %}
+                    </div>
+                {% endfor %}
             </div>
         {% endfor %}
-    {% endfor %}
 
-    <button type="submit">Submit</button>
-</form>
+        <div class="navigation-buttons">
+            <button type="button" id="prevBtn" onclick="changeStep(-1)">Previous</button>
+            <button type="button" id="nextBtn" onclick="changeStep(1)">Next</button>
+            <button type="submit" id="submitBtn" style="display:none;">Submit</button>
+        </div>
+    </form>
+
+    <script>
+        let currentStep = 0;
+        const steps = document.querySelectorAll(".step");
+        const progressBar = document.getElementById("progressBar");
+        const prevBtn = document.getElementById("prevBtn");
+        const nextBtn = document.getElementById("nextBtn");
+        const submitBtn = document.getElementById("submitBtn");
+
+        function showStep(stepIndex) {
+            steps.forEach((step, index) => {
+                step.classList.toggle("active", index === stepIndex);
+            });
+
+            prevBtn.style.display = stepIndex === 0 ? "none" : "inline-block";
+            nextBtn.style.display = stepIndex === steps.length - 1 ? "none" : "inline-block";
+            submitBtn.style.display = stepIndex === steps.length - 1 ? "inline-block" : "none";
+
+            const progressPercent = ((stepIndex + 1) / steps.length) * 100;
+            progressBar.style.width = progressPercent + "%";
+            progressBar.textContent = Math.round(progressPercent) + "%";
+        }
+
+        function changeStep(direction) {
+            currentStep += direction;
+
+            if (currentStep < 0) {
+                currentStep = 0;
+            }
+
+            if (currentStep >= steps.length) {
+                currentStep = steps.length - 1;
+            }
+
+            showStep(currentStep);
+        }
+
+        showStep(currentStep);
+    </script>
+</body>
+</html>
