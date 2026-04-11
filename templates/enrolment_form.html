@@ -1,0 +1,39 @@
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    {% for section in schema.sections %}
+        <h2>{{ section.section_number }} {{ section.section_title }}</h2>
+
+        {% for question in section.questions %}
+            <div>
+                <label>{{ question.label }}</label>
+
+                {% if question.type == "text" %}
+                    <input type="text" name="{{ question.key }}">
+
+                {% elif question.type == "date" %}
+                    <input type="date" name="{{ question.key }}">
+
+                {% elif question.type == "textarea" %}
+                    <textarea name="{{ question.key }}"></textarea>
+
+                {% elif question.type == "file" %}
+                    <input type="file" name="{{ question.key }}">
+
+                {% elif question.type == "boolean" %}
+                    <input type="checkbox" name="{{ question.key }}">
+
+                {% elif question.type == "select" %}
+                    <select name="{{ question.key }}">
+                        {% for choice in question.choices %}
+                            <option value="{{ choice }}">{{ choice }}</option>
+                        {% endfor %}
+                    </select>
+                {% endif %}
+
+            </div>
+        {% endfor %}
+    {% endfor %}
+
+    <button type="submit">Submit</button>
+</form>
