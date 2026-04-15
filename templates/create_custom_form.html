@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Custom Form</title>
+    <style>
+        .question-block {
+            border: 1px solid #ccc;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Create Custom Form for {{ school.name }}</h1>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        {{ form.as_p }}
+
+        <h2>Questions</h2>
+
+        <div id="questions-container">
+            <div class="question-block">
+                <p>
+                    <label>Question Label</label><br>
+                    <input type="text" name="question_label">
+                </p>
+
+                <p>
+                    <label>Question Key</label><br>
+                    <input type="text" name="question_key">
+                </p>
+
+                <p>
+                    <label>Question Type</label><br>
+                    <select name="question_type">
+                        <option value="text">Text</option>
+                        <option value="textarea">Textarea</option>
+                        <option value="date">Date</option>
+                        <option value="boolean">Boolean</option>
+                        <option value="select">Dropdown</option>
+                        <option value="file">File Upload</option>
+                    </select>
+                </p>
+
+                <p>
+                    <label>Required?</label><br>
+                    <select name="question_required">
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </p>
+
+                <p>
+                    <label>Choices (comma separated, only for dropdown)</label><br>
+                    <input type="text" name="question_choices">
+                </p>
+            </div>
+        </div>
+
+        <button type="button" onclick="addQuestion()">Add Another Question</button>
+        <button type="submit">Save Custom Form</button>
+    </form>
+
+    <script>
+        function addQuestion() {
+            const container = document.getElementById("questions-container");
+
+            const block = document.createElement("div");
+            block.className = "question-block";
+
+            block.innerHTML = `
+                <p>
+                    <label>Question Label</label><br>
+                    <input type="text" name="question_label">
+                </p>
+
+                <p>
+                    <label>Question Key</label><br>
+                    <input type="text" name="question_key">
+                </p>
+
+                <p>
+                    <label>Question Type</label><br>
+                    <select name="question_type">
+                        <option value="text">Text</option>
+                        <option value="textarea">Textarea</option>
+                        <option value="date">Date</option>
+                        <option value="boolean">Boolean</option>
+                        <option value="select">Dropdown</option>
+                        <option value="file">File Upload</option>
+                    </select>
+                </p>
+
+                <p>
+                    <label>Required?</label><br>
+                    <select name="question_required">
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </p>
+
+                <p>
+                    <label>Choices (comma separated, only for dropdown)</label><br>
+                    <input type="text" name="question_choices">
+                </p>
+            `;
+
+            container.appendChild(block);
+        }
+    </script>
+</body>
+</html>
