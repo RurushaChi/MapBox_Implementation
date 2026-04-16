@@ -54,9 +54,9 @@
     <form method="POST" enctype="multipart/form-data">
         {% csrf_token %}
 
-        {% for section in schema.sections %}
+        {% for section in sections %}
             <div class="step {% if forloop.first %}active{% endif %}">
-                <h2>{{ section.section_number }} {{ section.section_title }}</h2>
+                <h2>Section {{ section.section_number }} - {{ section.section_title }}</h2>
 
                 {% for question in section.questions %}
                     <div class="question">
