@@ -235,3 +235,172 @@ class AppAnswer(models.Model):
 
     def __str__(self):
         return f"Application {self.application_id} - {self.question_key}"
+
+#This is for interview booking capabilities
+class InterviewAvailability(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        INACTIVE = "inactive", "Inactive"
+        ARCHIVED = "archived", "Archived"
+
+    class Weekday(models.IntegerChoices):
+        MONDAY = 0, "Monday"
+        TUESDAY = 1, "Tuesday"
+        WEDNESDAY = 2, "Wednesday"
+        THURSDAY = 3, "Thursday"
+        FRIDAY = 4, "Friday"
+        SATURDAY = 5, "Saturday"
+        SUNDAY = 6, "Sunday"
+
+    staff = models.ForeignKey(
+        "Staff",
+        on_delete=models.CASCADE,
+        related_name="interview_availabilities"
+    )
+    school = models.ForeignKey(
+        "School",
+        on_delete=models.CASCADE,
+        related_name="interview_availabilities"
+    )
+
+    title = models.CharField(max_length=100, blank=True, null=True)
+
+    weekday = models.IntegerField(choices=Weekday.choices)
+    window_start_time = models.TimeField()
+    window_end_time = models.TimeField()
+
+    slot_length_minutes = models.PositiveIntegerField()
+    generate_weeks = models.PositiveIntegerField()
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE
+    )
+
+    effective_from = models.DateField(blank=True, null=True)
+    effective_until = models.DateField(blank=True, null=True)
+    generated_until_date = models.DateField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["school_id", "staff_id", "weekday", "window_start_time"]
+        indexes = [
+            models.Index(fields=["school", "staff", "status"]),
+            models.Index(fields=["weekday"]),
+        ]
+
+    def clean(self):
+        if self.window_end_time <= self.window_start_time:
+            raise ValidationError("Window end time must be after window start time.")
+
+        if self.slot_length_minutes <= 0:
+            raise ValidationError("Slot length must be greater than 0 minutes.")
+
+        if self.generate_weeks <= 0:
+            raise ValidationError("Generate weeks must be greater than 0.")
+
+        if self.staff and self.school and self.staff.school_id != self.school_id:
+            raise ValidationError("Staff school must match the selected school.")
+
+    def __str__(self):
+        return f"{self.title or 'Interview Availability'} - {self.get_weekday_display()}"
+
+
+class InterviewSlot(models.Model):
+    availability = models.ForeignKey(
+        "InterviewAvailability",
+        on_delete=models.SET_NULL,
+        related_name="slots",
+        blank=True,
+        null=True
+    )
+    staff = models.ForeignKey(
+        "Staff",
+        on_delete=models.CASCADE,
+        related_name="interview_slots"
+    )
+    school = models.ForeignKey(
+        "School",
+        on_delete=models.CASCADE,
+        related_name="interview_slots"
+    )
+
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+
+    is_active = models.BooleanField(default=True)
+    is_booked = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["start_time"]
+        indexes = [
+            models.Index(fields=["school", "staff", "is_active", "is_booked"]),
+            models.Index(fields=["start_time"]),
+        ]
+
+    def clean(self):
+        if self.end_time <= self.start_time:
+            raise ValidationError("End time must be after start time.")
+
+        if self.staff and self.school and self.staff.school_id != self.school_id:
+            raise ValidationError("Staff school must match the selected school.")
+
+        if self.availability and self.availability.school_id != self.school_id:
+            raise ValidationError("Availability school must match the selected school.")
+
+        if self.availability and self.availability.staff_id != self.staff_id:
+            raise ValidationError("Availability staff must match the selected staff.")
+
+    def __str__(self):
+        return f"{self.start_time} - {self.end_time}"
+
+
+class Interview(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        SENT = "sent", "Slots Sent"
+        BOOKED = "booked", "Booked"
+        COMPLETED = "completed", "Completed"
+        CANCELLED = "cancelled", "Cancelled"
+
+    application = models.OneToOneField(
+        "Application",
+        on_delete=models.CASCADE,
+        related_name="interview"
+    )
+    slot = models.ForeignKey(
+        "InterviewSlot",
+        on_delete=models.SET_NULL,
+        related_name="interviews",
+        blank=True,
+        null=True
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING
+    )
+    booked_at = models.DateTimeField(blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["application_id"]
+        indexes = [
+            models.Index(fields=["status"]),
+        ]
+
+    def clean(self):
+        if self.slot and self.application and self.slot.school_id != self.application.school_id:
+            raise ValidationError("Interview slot school must match the application school.")
+
+    def __str__(self):
+        return f"Interview for Application {self.application_id}"

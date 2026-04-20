@@ -51,20 +51,35 @@ def enrolment_form_view(request, school_id):
         for section in combined_sections:
             for question in section["questions"]:
                 key = question["key"]
+                question_type = question["type"]
 
-                if question["type"] == "file":
-                    value = request.FILES.get(key)
-                    if value:
+                if question_type == "file":
+                    uploaded_file = request.FILES.get(key)
+
+                    if uploaded_file:
                         AppAnswer.objects.create(
                             application=application,
                             source_type=section["source_type"],
                             custom_form_id=section["custom_form_id"],
                             question_key=key,
-                            answer_file=value
+                            answer_file=uploaded_file
                         )
+
+                elif question_type == "boolean":
+                    value = "true" if request.POST.get(key) else "false"
+
+                    AppAnswer.objects.create(
+                        application=application,
+                        source_type=section["source_type"],
+                        custom_form_id=section["custom_form_id"],
+                        question_key=key,
+                        answer_text=value
+                    )
+
                 else:
-                    value = request.POST.get(key)
-                    if value:
+                    value = request.POST.get(key, "").strip()
+
+                    if value != "":
                         AppAnswer.objects.create(
                             application=application,
                             source_type=section["source_type"],
