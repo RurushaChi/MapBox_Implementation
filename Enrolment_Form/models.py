@@ -27,25 +27,28 @@ class School(models.Model):
         return self.name
 
 
-class Staff(models.Model):
-    class StaffType(models.TextChoices):
+class UserRole(models.Model):
+    class RoleType(models.TextChoices):
         SCHOOL_ADMIN = "school_admin", "School Admin"
         SCHOOL_SYSTEMS_ADMIN = "school_systems_admin", "School Systems Admin"
         SLT = "slt", "SLT"
+        CAREGIVER = "caregiver", "Caregiver"
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="staff_profile"
+        related_name="role_profile"
     )
     school = models.ForeignKey(
         "School",
         on_delete=models.CASCADE,
-        related_name="staff_members"
+        related_name="user_roles",
+        blank=True,
+        null=True
     )
-    staff_type = models.CharField(
+    role_type = models.CharField(
         max_length=30,
-        choices=StaffType.choices
+        choices=RoleType.choices
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -55,7 +58,7 @@ class Staff(models.Model):
         ordering = ["school__name", "user__username"]
 
     def __str__(self):
-        return f"{self.user} - {self.get_staff_type_display()}"
+        return f"{self.user} - {self.get_role_type_display()}"
 
 
 class BaseForm(models.Model):
@@ -82,7 +85,7 @@ class CustomForm(models.Model):
         related_name="custom_forms"
     )
     created_by = models.ForeignKey(
-        "Staff",
+        "UserRole",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -236,7 +239,7 @@ class AppAnswer(models.Model):
     def __str__(self):
         return f"Application {self.application_id} - {self.question_key}"
 
-#This is for interview booking capabilities
+
 class InterviewAvailability(models.Model):
     class Status(models.TextChoices):
         ACTIVE = "active", "Active"
@@ -253,7 +256,7 @@ class InterviewAvailability(models.Model):
         SUNDAY = 6, "Sunday"
 
     staff = models.ForeignKey(
-        "Staff",
+        "UserRole",
         on_delete=models.CASCADE,
         related_name="interview_availabilities"
     )
@@ -318,7 +321,7 @@ class InterviewSlot(models.Model):
         null=True
     )
     staff = models.ForeignKey(
-        "Staff",
+        "UserRole",
         on_delete=models.CASCADE,
         related_name="interview_slots"
     )

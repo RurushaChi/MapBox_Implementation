@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .models import School, Staff, CustomForm, BaseForm, Application, AppAnswer
+from .models import School, UserRole, CustomForm, BaseForm, Application, AppAnswer, InterviewAvailability, InterviewSlot, Interview
 from .forms import CustomFormBuilderForm
 
 def enrolment_form_view(request, school_id):
@@ -97,7 +97,7 @@ def enrolment_form_view(request, school_id):
 @login_required
 def create_custom_form_view(request, school_id):
     school = get_object_or_404(School, id=school_id)
-    staff = get_object_or_404(Staff, user=request.user, school=school)
+    staff = get_object_or_404(UserRole, user=request.user, school=school)
 
     if request.method == "POST":
         form = CustomFormBuilderForm(request.POST)
@@ -105,7 +105,7 @@ def create_custom_form_view(request, school_id):
         if form.is_valid():
             custom_form = form.save(commit=False)
             custom_form.school = school
-            custom_form.created_by = staff
+            custom_form.created_by = admin
 
             question_labels = request.POST.getlist("question_label")
             question_keys = request.POST.getlist("question_key")
