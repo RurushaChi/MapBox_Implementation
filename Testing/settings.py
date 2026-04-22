@@ -1,6 +1,7 @@
 from os import getenv
 from dotenv import load_dotenv
 import os
+load_dotenv()
 
 """
 Django settings for Testing project.
@@ -44,7 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'Mapbox_Implementation.apps.MapboxImplementationConfig',
+    'Zoning.apps.MapboxImplementationConfig',
     'Enrolment_Form.apps.EnrolmentFormConfig',
 ]
 
@@ -94,6 +95,10 @@ DATABASES = {
         }
     }
 }
+
+#Mapbox API
+
+MAPBOX_ACCESS_TOKEN = os.getenv("MAPBOX_ACCESS_TOKEN")
 
 
 # Password validation

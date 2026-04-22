@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Zone Check</title>
+</head>
+<body>
+    <h1>Check School Zone - {{ school.name }}</h1>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Check Address</button>
+    </form>
+
+    {% if error_message %}
+        <p style="color:red;">{{ error_message }}</p>
+    {% endif %}
+
+    {% if result %}
+        <h2>Result</h2>
+        <p><strong>Entered address:</strong> {{ result.address }}</p>
+        <p><strong>Matched address:</strong> {{ result.matched_address }}</p>
+        <p><strong>Latitude:</strong> {{ result.latitude }}</p>
+        <p><strong>Longitude:</strong> {{ result.longitude }}</p>
+        <p><strong>Status:</strong> {{ result.zoning_status }}</p>
+    {% endif %}
+</body>
+</html>
