@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Zone Checker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 750px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-top: 20px;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input, button {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        button {
+            margin-top: 24px;
+            cursor: pointer;
+        }
+
+        .results-box {
+            border: 1px solid #ccc;
+            border-top: none;
+            max-height: 220px;
+            overflow-y: auto;
+            background: white;
+        }
+
+        .result-item {
+            padding: 10px;
+            border-top: 1px solid #eee;
+            cursor: pointer;
+            background: white;
+        }
+
+        .result-item:hover {
+            background: #f5f5f5;
+        }
+
+        .selected-info {
+            margin-top: 8px;
+            font-size: 14px;
+            color: #444;
+        }
+
+        #finalResult {
+            margin-top: 25px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .success {
+            background-color: #e8f7e8;
+            border: 1px solid #8bce8b;
+        }
+
+        .error {
+            background-color: #fdeaea;
+            border: 1px solid #e2a0a0;
+        }
+    </style>
+</head>
+<body>
+    <h1>School Zone Checker</h1>
+
+    <label for="schoolSearch">Search School</label>
+    <input type="text" id="schoolSearch" placeholder="Start typing a school name...">
+    <div id="schoolResults" class="results-box"></div>
+    <div id="selectedSchoolText" class="selected-info"></div>
+
+    <label for="addressInput">Enter Address</label>
+    <input type="text" id="addressInput" placeholder="Start typing an address...">
+    <div id="addressResults" class="results-box"></div>
+    <div id="selectedAddressText" class="selected-info"></div>
+
+    <button id="checkBtn" type="button">Check Zone</button>
+
+    <div id="finalResult"></div>
+
+    <script>
+        const mapboxToken = "{{ mapbox_token|escapejs }}";
+
+        const schoolSearch = document.getElementById("schoolSearch");
+        const schoolResults = document.getElementById("schoolResults");
+        const selectedSchoolText = document.getElementById("selectedSchoolText");
+
+        const addressInput = document.getElementById("addressInput");
+        const addressResults = document.getElementById("addressResults");
+        const selectedAddressText = document.getElementById("selectedAddressText");
+
+        const checkBtn = document.getElementById("checkBtn");
+        const finalResult = document.getElementById("finalResult");
+
+        const searchSchoolsUrl = "{% url 'search_schools' %}";
+        const checkZoneUrl = "{% url 'check_zone' %}";
+
+        let selectedSchoolId = null;
+        let selectedLng = null;
+        let selectedLat = null;
+
+        let schoolSearchTimeout = null;
+        let addressSearchTimeout = null;
+
+        function getCSRFToken() {
+            const name = "csrftoken";
+            const cookies = document.cookie.split(";");
+
+            for (let cookie of cookies) {
+                cookie = cookie.trim();
+                if (cookie.startsWith(name + "=")) {
+                    return decodeURIComponent(cookie.substring(name.length + 1));
+                }
+            }
+            return "";
+        }
+
+        function showFinalResult(message, isSuccess) {
+            finalResult.style.display = "block";
+            finalResult.textContent = message;
+            finalResult.className = isSuccess ? "success" : "error";
+        }
+
+        function clearSchoolResults() {
+            schoolResults.innerHTML = "";
+        }
+
+        function clearAddressResults() {
+            addressResults.innerHTML = "";
+        }
+
+        schoolSearch.addEventListener("input", function () {
+            const query = schoolSearch.value.trim();
+
+            selectedSchoolId = null;
+            selectedSchoolText.textContent = "";
+            clearSchoolResults();
+
+            clearTimeout(schoolSearchTimeout);
+
+            if (query.length < 2) {
+                return;
+            }
+
+            schoolSearchTimeout = setTimeout(async function () {
+                try {
+                    const response = await fetch(`${searchSchoolsUrl}?q=${encodeURIComponent(query)}`, {
+                        method: "GET",
+                        headers: {
+                            "Accept": "application/json"
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`School search failed with status ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    clearSchoolResults();
+
+                    if (!data.results || data.results.length === 0) {
+                        return;
+                    }
+
+                    data.results.forEach((school) => {
+                        const item = document.createElement("div");
+                        item.className = "result-item";
+                        item.textContent = school.name;
+
+                        item.addEventListener("click", function () {
+                            selectedSchoolId = school.id;
+                            schoolSearch.value = school.name;
+                            selectedSchoolText.textContent = `Selected school: ${school.name}`;
+                            clearSchoolResults();
+                        });
+
+                        schoolResults.appendChild(item);
+                    });
+                } catch (error) {
+                    console.error("School search error:", error);
+                }
+            }, 350);
+        });
+
+        addressInput.addEventListener("input", function () {
+            const query = addressInput.value.trim();
+
+            selectedLng = null;
+            selectedLat = null;
+            selectedAddressText.textContent = "";
+            clearAddressResults();
+
+            clearTimeout(addressSearchTimeout);
+
+            if (query.length < 3) {
+                return;
+            }
+
+            addressSearchTimeout = setTimeout(async function () {
+                try {
+                    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${encodeURIComponent(mapboxToken)}&autocomplete=true&limit=5&country=NZ`;
+
+                    const response = await fetch(url, {
+                        method: "GET",
+                        headers: {
+                            "Accept": "application/json"
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Mapbox request failed with status ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    clearAddressResults();
+
+                    if (!data.features || data.features.length === 0) {
+                        return;
+                    }
+
+                    data.features.forEach((feature) => {
+                        const item = document.createElement("div");
+                        item.className = "result-item";
+                        item.textContent = feature.place_name;
+
+                        item.addEventListener("click", function () {
+                            selectedLng = feature.center[0];
+                            selectedLat = feature.center[1];
+                            addressInput.value = feature.place_name;
+                            selectedAddressText.textContent = `Selected address: ${feature.place_name}`;
+                            clearAddressResults();
+                        });
+
+                        addressResults.appendChild(item);
+                    });
+                } catch (error) {
+                    console.error("Address search error:", error);
+                }
+            }, 500);
+        });
+
+        checkBtn.addEventListener("click", async function () {
+            if (!selectedSchoolId) {
+                showFinalResult("Please select a school from the school suggestions.", false);
+                return;
+            }
+
+            if (selectedLng === null || selectedLat === null) {
+                showFinalResult("Please select an address from the address suggestions.", false);
+                return;
+            }
+
+            try {
+                const response = await fetch(checkZoneUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": getCSRFToken(),
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify({
+                        school_id: selectedSchoolId,
+                        lng: selectedLng,
+                        lat: selectedLat
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Check zone failed with status ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showFinalResult(data.message, data.inside_zone);
+                } else {
+                    showFinalResult(data.message, false);
+                }
+            } catch (error) {
+                console.error("Check zone error:", error);
+                showFinalResult("Something went wrong while checking the zone.", false);
+            }
+        });
+
+        document.addEventListener("click", function (event) {
+            if (!schoolSearch.contains(event.target) && !schoolResults.contains(event.target)) {
+                clearSchoolResults();
+            }
+
+            if (!addressInput.contains(event.target) && !addressResults.contains(event.target)) {
+                clearAddressResults();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,61 +1,90 @@
+import json
+from django.conf import settings
+from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404
-from .models import School, SchoolZone
-from .forms import AddressZoneCheckForm
-from .utils.zoning import geocode_address, check_if_point_in_zone
+from django.views.decorators.http import require_GET, require_POST
+from shapely.geometry import Point, shape
+
+from .models import SchoolZone
 
 
-
-def zone_check_view(request, school_id):
-    school = get_object_or_404(School, id=school_id)
-    zone = get_object_or_404(SchoolZone, school=school, is_active=True)
-
-    result = None
-    error_message = None
-
-    if request.method == "POST":
-        form = AddressZoneCheckForm(request.POST)
-
-        if form.is_valid():
-            address = form.cleaned_data["address"]
-
-            geocode_result = geocode_address(address)
-
-            if not geocode_result:
-                error_message = "Address could not be found."
-            else:
-                latitude = geocode_result["latitude"]
-                longitude = geocode_result["longitude"]
-
-                in_zone = check_if_point_in_zone(
-                    zone.geojson_boundary,
-                    longitude,
-                    latitude
-                )
-
-                if in_zone:
-                    zoning_status = "In zone"
-                else:
-                    zoning_status = "Out of zone"
-
-                result = {
-                    "school_name": school.name,
-                    "address": address,
-                    "matched_address": geocode_result["display_name"],
-                    "latitude": latitude,
-                    "longitude": longitude,
-                    "zoning_status": zoning_status
-                }
-    else:
-        form = AddressZoneCheckForm()
-
-    return render(request, "zone_check.html", {
-        "school": school,
-        "form": form,
-        "result": result,
-        "error_message": error_message
+def zone_checker_page(request):
+    return render(request, "zoning/zone_checker.html", {
+        "mapbox_token": settings.MAPBOX_ACCESS_TOKEN,
     })
 
 
-from django.shortcuts import render
+@require_GET
+def search_schools(request):
+    query = request.GET.get("q", "").strip()
 
-# Create your views here.
+    if len(query) < 2:
+        return JsonResponse({"results": []})
+
+    schools = (
+        SchoolZone.objects
+        .filter(poly_name__istartswith=query)
+        .only("id", "poly_name")
+        .order_by("poly_name")[:10]
+    )
+
+    results = [
+        {
+            "id": school.id,
+            "name": school.poly_name
+        }
+        for school in schools
+    ]
+
+    return JsonResponse({"results": results})
+
+@require_POST
+def check_zone(request):
+    try:
+        data = json.loads(request.body)
+
+        school_id = data.get("school_id")
+        lng = data.get("lng")
+        lat = data.get("lat")
+
+        if not school_id:
+            return JsonResponse({
+                "success": False,
+                "message": "Please select a school."
+            }, status=400)
+
+        if lng is None or lat is None:
+            return JsonResponse({
+                "success": False,
+                "message": "Please select an address from the suggestions."
+            }, status=400)
+
+        school_zone = get_object_or_404(SchoolZone, id=school_id)
+
+        if not school_zone.geojson_boundary:
+            return JsonResponse({
+                "success": False,
+                "message": "This school does not have zone geometry saved."
+            }, status=400)
+
+        polygon = shape(school_zone.geojson_boundary)
+        point = Point(float(lng), float(lat))
+
+        inside = polygon.contains(point) or polygon.touches(point)
+
+        return JsonResponse({
+            "success": True,
+            "school": school_zone.poly_name,
+            "inside_zone": inside,
+            "message": (
+                f"This address is inside {school_zone.poly_name}'s zone."
+                if inside else
+                f"This address is outside {school_zone.poly_name}'s zone."
+            )
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "message": f"Error: {str(e)}"
+        }, status=500)

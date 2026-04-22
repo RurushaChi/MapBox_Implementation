@@ -39,7 +39,7 @@ BASE_FORM_SCHEMA = {
 
         {
             "section_number": "6.1.4",
-            "section_title": "Address & Zoning",
+            "section_title": "Address & zoning",
             "order": 3,
             "questions": [
                 {

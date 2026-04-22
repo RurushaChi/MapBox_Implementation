@@ -1,6 +1,8 @@
 from django.urls import path
-from .views import zone_check_view
+from .views import zone_checker_page, search_schools, check_zone
 
 urlpatterns = [
-    path("schools/<int:school_id>/zone-check/", zone_check_view, name="zone_check"),
+    path("checker/", zone_checker_page, name="zone_checker_page"),
+    path("search-schools/", search_schools, name="search_schools"),
+    path("check-zone/", check_zone, name="check_zone"),
 ]

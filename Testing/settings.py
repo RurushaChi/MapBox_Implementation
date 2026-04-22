@@ -97,8 +97,7 @@ DATABASES = {
 }
 
 #Mapbox API
-
-MAPBOX_ACCESS_TOKEN = os.getenv("MAPBOX_ACCESS_TOKEN")
+MAPBOX_ACCESS_TOKEN = os.environ.get("MAPBOX_ACCESS_TOKEN")
 
 
 # Password validation
