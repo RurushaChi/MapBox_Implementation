@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from .models import School, UserRole, CustomForm, BaseForm, Application, AppAnswer, InterviewAvailability, InterviewSlot, Interview
 from .forms import CustomFormBuilderForm
 
+
 def enrolment_form_view(request, school_id):
     school = get_object_or_404(School, id=school_id)
 
@@ -94,10 +95,12 @@ def enrolment_form_view(request, school_id):
         "sections": combined_sections,
         "school": school
     })
+
+
 @login_required
 def create_custom_form_view(request, school_id):
     school = get_object_or_404(School, id=school_id)
-    staff = get_object_or_404(UserRole, user=request.user, school=school)
+    user_role = get_object_or_404(UserRole, user=request.user, school=school)
 
     if request.method == "POST":
         form = CustomFormBuilderForm(request.POST)
@@ -105,7 +108,7 @@ def create_custom_form_view(request, school_id):
         if form.is_valid():
             custom_form = form.save(commit=False)
             custom_form.school = school
-            custom_form.created_by = admin
+            custom_form.created_by = user_role
 
             question_labels = request.POST.getlist("question_label")
             question_keys = request.POST.getlist("question_key")
@@ -162,5 +165,3 @@ def create_custom_form_view(request, school_id):
 @login_required
 def custom_form_success_view(request):
     return render(request, "custom_form_success.html")
-
-
